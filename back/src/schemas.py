@@ -20,3 +20,4 @@ class Filter(BaseModel):
     only_with_salary: bool = False
     page: int = 0
     professional_role: list[str] = []
+    experience: Optional[str] = None
