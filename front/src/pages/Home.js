@@ -18,6 +18,7 @@ const Home = () => {
 
     return (
         <ChakraProvider>
+
             <FilterHook />
             {/* {
                 vacancies.map(vacancy => {
@@ -31,6 +32,7 @@ const Home = () => {
                     </Box>
                 })
             } */}
+      
         </ChakraProvider>
     );
 
