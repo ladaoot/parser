@@ -38,7 +38,7 @@ export const Categories = () => {
                                 <AccordionPanel spacing={2}>
                                     {professionsByCategory[category.id].map(profession => (
                                         <div>
-                                            <input type="checkbox" key={profession.id} />
+                                            <input type="checkbox" value={profession.id} />
                                             <label>{profession.name}</label>
                                         </div>
                                     ))}

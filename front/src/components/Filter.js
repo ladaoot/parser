@@ -6,7 +6,9 @@ export const Filter = () => {
     return (
         <Box>
             <VStack>
-                <input name="text" style={{ borderColor: 'black', borderWidth: '2px', width:'800px' }} placeholder="Профессия, должность или компания" />
+                <input name="text" 
+                style={{ borderColor: 'black', borderWidth: '2px', width:'800px' }} 
+                placeholder="Профессия, должность или компания" />
             </VStack>
             <Categories />
         </Box>
