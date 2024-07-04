@@ -102,7 +102,7 @@ def map_from_hh_object_to_vacancies(items):
     return vacancies_data
 
 
-@app.get("/vacancies")
+@app.post("/vacancies")
 async def vacancies(filters: Union[schemas.Filter, None] = None, db: Session = Depends(get_db)):
     items = get_vacancies(filters)
 
@@ -131,4 +131,4 @@ async def get_roles_by_category(cat_id: str):
         if role["category"] == cat_id:
             res.append(role)
 
-    raise HTTPException(status_code=200, detail=res)
+    raise HTTPException(status_code=200,detail=res)
