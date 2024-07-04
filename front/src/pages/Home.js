@@ -105,6 +105,7 @@ import axios from 'axios';
 
 import { Categories } from '../moleculs/Categories';
 import { Filter } from '../components/Filter';
+import FilterHook from '../components/FilterHook';
 
 const Home = () => {
     // const [categories, setCategories] = useState([]);
@@ -157,7 +158,7 @@ const Home = () => {
                 </VStack>
             </Box> */}
             {/* <Categories/> */}
-            <Filter/>
+            <FilterHook/>
         </ChakraProvider>
     );
 

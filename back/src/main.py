@@ -131,4 +131,15 @@ async def get_roles_by_category(cat_id: str):
         if role["category"] == cat_id:
             res.append(role)
 
-    raise HTTPException(status_code=200,detail=res)
+    raise HTTPException(status_code=200, detail=res)
+
+
+@app.get("/filters/experience")
+async def get_experience():
+    url = 'https://api.hh.ru/dictionaries'
+
+    headers = {'OauthToken': constants.OAUTH_TOKEN}
+
+    response = requests.get(url, headers=headers)
+
+    return JSONResponse(content=response.json()["experience"])
