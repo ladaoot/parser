@@ -131,4 +131,4 @@ async def get_roles_by_category(cat_id: str):
         if role["category"] == cat_id:
             res.append(role)
 
-    raise HTTPException(status_code=200,detail=res)
+    raise HTTPException(status_code=200, detail=res)
