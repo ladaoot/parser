@@ -14,10 +14,15 @@ import {
     AccordionPanel,
     Stack,
     Box,
+    List,
+    Heading,
+    Center,
 } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
+import VacancyInfo from '../moleculs/VacancyInfo'
 
+// import {setVacancies,vacancies} from '../pages/Home'
 
 export default function FilterHook() {
     const {
@@ -45,10 +50,13 @@ export default function FilterHook() {
                 })
                     .then(response => {
                         setVacancies(response.data.vacancies)
+                        // localStorage.setItem('vacancies', JSON.stringify(response.data.vacancies))
                         setFound(response.data.found)
                     })
                     .catch(error => console.error('Error fetching categories:', error));
-                console.log(vacancies)
+                // console.log(vacancies)
+                // window.dispatchEvent( new Event('storage') )
+                // window.dispatchEvent(new Event('storage', ))
 
                 resolve()
             }, 1000)
@@ -81,7 +89,7 @@ export default function FilterHook() {
         axios.get('http://localhost:8000/filters/experience')
             .then(response => {
                 setExperience(response.data);
-                console.log(response.data)
+                // console.log(response.data)
             })
             .catch(error => console.error('Error fetching categories:', error));
 
@@ -103,7 +111,7 @@ export default function FilterHook() {
             <form onSubmit={handleSubmit(onSubmit)}>
                 <FormControl isInvalid={errors.name}>
 
-                    <VStack spacing={4} >
+                    <VStack spacing={4} marginTop={'2%'} >
                         <Stack direction={['column', 'row']} width='800px'>
                             <input id="text"
                                 style={{ borderColor: 'black', borderWidth: '2px', width: '700px' }}
@@ -117,8 +125,8 @@ export default function FilterHook() {
                             </Button>
                         </Stack>
                         <Text>{errors.text ? errors.text.message : ""}</Text>
-                        <Text fontSize="xl" fontWeight="bold">Categories</Text>
-                        <Accordion allowMultiple height={'200px'} style={{ overflow: 'auto' }} w={'800px'}>
+                        <Text fontSize="xl" fontWeight="bold">Выбирите категорию</Text>
+                        <Accordion allowMultiple height={'300px'} style={{ overflow: 'auto' }} w={'800px'}>
                             {categories.map(category => (
                                 <AccordionItem key={category.id}>
                                     <AccordionButton onClick={() => handleCategoryClick(category.id)}>
@@ -166,6 +174,8 @@ export default function FilterHook() {
                                     <label>{ex.name}</label>
                                 </Box>
                             ))}
+                            <input type='radio' id='null' value={null} {...register('experience')} />
+                            <label>Не имеет значения</label>
                         </Stack>
 
                     </VStack>
@@ -173,24 +183,25 @@ export default function FilterHook() {
                         {errors.text && errors.text.message}
                     </FormErrorMessage>
                 </FormControl>
-                <Button type='submit'>
-                    Применить фильтр
-                </Button>
+                <Center>
+                    <Button type='submit' justifySelf={'center'}>
+                        Применить фильтр
+                    </Button>
+                </Center>
             </form>
             {
-                found ? <Text>Нашлось всего {found} вакансий</Text> :<div></div>
-                }
-
+                found ? <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Нашлось всего {found} вакансий</Heading> :
+                    <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Ничего не найдено</Heading>
+            }
             {
                 vacancies.map(vacancy => (
-                    <Box>
-                        <Text>{vacancy.name}</Text>
-                        <Text>{vacancy.experience}</Text>
-                        <Text>{vacancy.employer}</Text>
-                        <Text>{vacancy.salary_from}</Text>
-                        <Text>{vacancy.salary_to}</Text>
-                        <Text>{vacancy.salary_currency}</Text>
-                    </Box>
+                    < VacancyInfo name={vacancy.name}
+                        experience={vacancy.experience}
+                        employer={vacancy.employer}
+                        salary_from={vacancy.salary_from}
+                        salary_to={vacancy.salary_to}
+                        salary_currency={vacancy.salary_currency} />
+
                 ))
             }
         </Box>
