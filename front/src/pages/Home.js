@@ -8,31 +8,41 @@ import FilterHook from '../components/FilterHook';
 
 const Home = () => {
 
-    // const [vacancies, SetVacancies] = useState([])
+    // const [vacancies, setVacancies] = useState([])
 
     // useEffect(() => {
-    //     axios.get('http://localhost:8000/vacancies')
-    //         .then(response => SetVacancies(response.data.vacancies))
-    //         .catch(error => console.error('Error fetching categories:', error));
+    //     localStorage.removeItem('vacancies')
+    //     localStorage.clear()
     // }, []);
+    // const [vacancies, setStorageValue] = useState(JSON.parse(localStorage.getItem('vacancies')) || []);
+
+    // useEffect(() => {
+    //     const handleStorageChange = (e) => {
+    //         if (e.key === 'vacancies') {
+    //             // Обработка изменений в localStorage для ключа 'myKey'
+    //             console.log('Значение изменилось:', e.newValue);
+    //           }
+    //     };
+
+    //     window.addEventListener('storage', handleStorageChange, false);
+
+    //     return () => {
+    //         window.removeEventListener('storage', handleStorageChange);
+    //     };
+    // }, []);
+
+    // window.addEventListener("storage", () => {
+    //     // When local storage changes, dump the list to
+    //     // the console.
+    //     console.log(JSON.parse(window.localStorage.getItem("vacancies")));
+    //   });
+
 
     return (
         <ChakraProvider>
 
             <FilterHook />
-            {/* {
-                vacancies.map(vacancy => {
-                    <Box>
-                        <Text>{vacancy.name}</Text>
-                        <Text>{vacancy.experience}</Text>
-                        <Text>{vacancy.employer}</Text>
-                        <Text>{vacancy.salary_from}</Text>
-                        <Text>{vacancy.salary_to}</Text>
-                        <Text>{vacancy.salary_currency}</Text>
-                    </Box>
-                })
-            } */}
-      
+
         </ChakraProvider>
     );
 
