@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi_pagination import Page, add_pagination, paginate
+
 import constants
 import models
 import orm
@@ -14,6 +16,7 @@ import schemas
 from database import SessionLocal, engine
 
 app = FastAPI()
+add_pagination(app)
 
 origins = ["*"]  # cors для добавления разрешенных источников
 
@@ -23,9 +26,6 @@ app.add_middleware(CORSMiddleware,
                    allow_methods=["POST"],
                    allow_headers=["*"]
                    )
-
-roles = []
-categories = []
 
 
 # Dependency
@@ -55,19 +55,37 @@ def shutdown_event():
 
 
 def get_vacancies(params=None):
-    url = 'https://api.hh.ru/vacancies'
+    url = 'https://api.hh.ru/vacancies?per_page=100'
 
     headers = {'OauthToken': constants.OAUTH_TOKEN}
 
-    if params.experience == '':
+    if params is not None and params.experience == '':
         params.experience = None
 
     response = requests.get(url, params=params, headers=headers)
+
+    params.page += 1
+
     print(response.url)
     if response.status_code == 200:
-        return response.json()
+        res = response.json()
+        vacancies_data = map_from_hh_object_to_vacancies(res)
+        save_vacancies_to_bd(vacancies_data)
+        # return {"found": res["found"], "pages": res["pages"]}
+        if int(res["pages"]) > params.page:
+            get_vacancies(params)
+
     else:
         raise HTTPException(status_code=response.status_code, detail="Unable to fetch vacancies")
+
+
+def save_vacancies_to_bd(vacancies_data):
+    db = SessionLocal()
+    for vacancy in vacancies_data:
+        if orm.get_vacancy_by_id(db, vacancy.id):
+            orm.update_vacancies(db, vacancy=vacancy)
+        else:
+            orm.create_vacancy(db=db, vacancy=vacancy)
 
 
 def map_from_hh_object_to_vacancies(items):
@@ -78,7 +96,11 @@ def map_from_hh_object_to_vacancies(items):
         employer = item["employer"]
         salary = item["salary"]
         vacancy.experience = experience["name"]
+        vacancy.experience_id = experience["id"]
         vacancy.employer = employer["name"]
+        pr_role = item["professional_roles"]
+        for role in pr_role:
+            vacancy.professional_roles.append(role["id"])
         if salary is not None:
             vacancy.salary_from = salary["from"]
             vacancy.salary_to = salary["to"]
@@ -91,20 +113,17 @@ def map_from_hh_object_to_vacancies(items):
 
 
 @app.post("/vacancies")
-async def vacancies(filters: Union[schemas.Filter, None] = None, db: Session = Depends(get_db)):
-    items = get_vacancies(filters)
+async def vacancies(page: int = 0, filters: Union[schemas.Filter, None] = schemas.Filter(),
+                    db: Session = Depends(get_db)) -> Page[schemas.VacancyModel]:
+    # get_vacancies(filters)
+    vacancies_data = orm.get_filtered_vacancies(db, filters)
+    if not vacancies_data or len(vacancies_data) < 30:
+        get_vacancies(filters)
+        vacancies_data = orm.get_filtered_vacancies(db, filters)
 
-    vacancies_data = map_from_hh_object_to_vacancies(items)
-
-    for vacancy in vacancies_data:
-        if orm.get_vacancy_by_id(db, vacancy.id):
-            orm.update_vacancies(db, vacancy=vacancy)
-        else:
-            orm.create_vacancy(db=db, vacancy=vacancy)
-
-    res = {"found": items["found"], "vacancies": jsonable_encoder(vacancies_data)}
-
-    return JSONResponse(content=res)
+    return paginate(vacancies_data)
+    # diction["vacancies"] = jsonable_encoder(orm.get_all_vacancies(db))
+    # return JSONResponse(content=diction)
 
 
 @app.get("/filters/categories")
@@ -117,23 +136,16 @@ async def filters_categories(db: Session = Depends(get_db)):
     cat = response.json()["categories"]
 
     for c in cat:
-        # item = {"name": c["name"], "id": c["id"]}
         orm.create_category(db, schemas.Category(id=c["id"], name=c["name"]))
 
         for r in c["roles"]:
-            # roles.append({"name": r["name"], "id": r["id"], "category": c["id"]})
             orm.create_role(db, schemas.Role(id=r["id"], name=r["name"], category_id=c["id"]))
 
-        # categories.append(item)
     return JSONResponse(content=jsonable_encoder(orm.get_all_categories(db)))
 
 
 @app.get("/filters/categories/{cat_id}")
 async def get_roles_by_category(cat_id: str, db: Session = Depends(get_db)):
-    # res = []
-    # for role in roles:
-    #     if role["category"] == cat_id:
-    #         res.append(role)
     return JSONResponse(content=jsonable_encoder(orm.get_all_roles_by_category(db, int(cat_id))))
 
 

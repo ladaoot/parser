@@ -6,11 +6,13 @@ class VacancyModel(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     experience: Optional[str] = None
+    experience_id: Optional[str] = None
     employer: Optional[str] = None
     salary_from: Optional[int] = None
     salary_to: Optional[int] = None
     salary_currency: Optional[str] = None
     is_archived: bool = False
+    professional_roles: list[str] = []
 
 
 class Filter(BaseModel):

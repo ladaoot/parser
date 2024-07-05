@@ -12,11 +12,13 @@ class Vacancy(Base):
     id = Column(BigInteger, primary_key=True)
     name = Column(String)
     experience = Column(String)
+    experience_id = Column(String)
     employer = Column(String)
     salary_from = Column(Integer, nullable=True)
     salary_to = Column(Integer, nullable=True)
     salary_currency = Column(String)
     is_archived = Column(Boolean)
+    professional_roles = Column(ARRAY(String))
 
 
 class Category(Base):
