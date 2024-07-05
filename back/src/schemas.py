@@ -21,3 +21,14 @@ class Filter(BaseModel):
     page: int = 0
     professional_role: list[str] = []
     experience: Optional[str] = None
+
+
+class Category(BaseModel):
+    id: int
+    name: str
+
+
+class Role(BaseModel):
+    id: int
+    name: str
+    category_id: int

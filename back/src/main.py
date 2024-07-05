@@ -28,6 +28,15 @@ roles = []
 categories = []
 
 
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 async def startup_event():
     models.Base.metadata.create_all(bind=engine)
@@ -39,40 +48,19 @@ async def startup_event():
         r = response.json()
         constants.OAUTH_TOKEN = r['access_token']
 
-    url = 'https://api.hh.ru/professional_roles'
-
-    headers = {'OauthToken': constants.OAUTH_TOKEN}
-
-    response = requests.get(url, headers=headers)
-    cat = response.json()["categories"]
-
-    for c in cat:
-        item = {"name": c["name"], "id": c["id"]}
-
-        for r in c["roles"]:
-            roles.append({"name": r["name"], "id": r["id"], "category": c["id"]})
-
-        categories.append(item)
-
 
 @app.on_event("shutdown")
 def shutdown_event():
     models.Base.metadata.drop_all(bind=engine)
 
 
-# Dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 def get_vacancies(params=None):
     url = 'https://api.hh.ru/vacancies'
 
     headers = {'OauthToken': constants.OAUTH_TOKEN}
+
+    if params.experience == '':
+        params.experience = None
 
     response = requests.get(url, params=params, headers=headers)
     print(response.url)
@@ -120,18 +108,33 @@ async def vacancies(filters: Union[schemas.Filter, None] = None, db: Session = D
 
 
 @app.get("/filters/categories")
-async def filters_categories():
-    raise HTTPException(status_code=200, detail=categories)
+async def filters_categories(db: Session = Depends(get_db)):
+    url = 'https://api.hh.ru/professional_roles'
+
+    headers = {'OauthToken': constants.OAUTH_TOKEN}
+
+    response = requests.get(url, headers=headers)
+    cat = response.json()["categories"]
+
+    for c in cat:
+        # item = {"name": c["name"], "id": c["id"]}
+        orm.create_category(db, schemas.Category(id=c["id"], name=c["name"]))
+
+        for r in c["roles"]:
+            # roles.append({"name": r["name"], "id": r["id"], "category": c["id"]})
+            orm.create_role(db, schemas.Role(id=r["id"], name=r["name"], category_id=c["id"]))
+
+        # categories.append(item)
+    return JSONResponse(content=jsonable_encoder(orm.get_all_categories(db)))
 
 
 @app.get("/filters/categories/{cat_id}")
-async def get_roles_by_category(cat_id: str):
-    res = []
-    for role in roles:
-        if role["category"] == cat_id:
-            res.append(role)
-
-    raise HTTPException(status_code=200, detail=res)
+async def get_roles_by_category(cat_id: str, db: Session = Depends(get_db)):
+    # res = []
+    # for role in roles:
+    #     if role["category"] == cat_id:
+    #         res.append(role)
+    return JSONResponse(content=jsonable_encoder(orm.get_all_roles_by_category(db, int(cat_id))))
 
 
 @app.get("/filters/experience")
