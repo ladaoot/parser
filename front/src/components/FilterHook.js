@@ -17,6 +17,8 @@ import {
     List,
     Heading,
     Center,
+    SimpleGrid,
+    Skeleton,
 } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
@@ -33,34 +35,51 @@ export default function FilterHook() {
 
     const [vacancies, setVacancies] = useState([])
     const [found, setFound] = useState()
+    const [pages, setPages] = useState()
+    const [currentPage, setCurrentPage] = useState(1)
+    const [isLoading, setLoading] = useState(true)
+
+
 
     function onSubmit(values) {
         return new Promise((resolve) => {
             setTimeout(() => {
-                alert(JSON.stringify(values, null, 2))
-
-
-                axios.post('http://localhost:8000/vacancies', {
-                    text: values.text,
-                    salary: values.salary,
-                    currency: values.currency,
-                    only_with_salary: values.only_with_salary,
-                    professional_role: values.professional_role,
-                    experience: values.experience
-                })
-                    .then(response => {
-                        setVacancies(response.data.vacancies)
-                        // localStorage.setItem('vacancies', JSON.stringify(response.data.vacancies))
-                        setFound(response.data.found)
-                    })
-                    .catch(error => console.error('Error fetching categories:', error));
-                // console.log(vacancies)
-                // window.dispatchEvent( new Event('storage') )
-                // window.dispatchEvent(new Event('storage', ))
-
+                // alert(JSON.stringify(values, null, 2))
+                localStorage.setItem('filters', JSON.stringify(values))
+                setLoading(false)
+                do_axios(values,1)
+                
                 resolve()
-            }, 1000)
+            }, 200)
         })
+    }
+
+    function do_axios(values,page) {
+        setLoading(false);
+        console.log(isLoading);
+        axios.post(`http://localhost:8000/vacancies?page=${page}&size=30`, {
+            text: values.text,
+            salary: values.salary,
+            currency: values.currency,
+            only_with_salary: values.only_with_salary,
+            professional_role: values.professional_role,
+            experience: values.experience,
+            page: page-1
+        })
+            .then(response => {
+                setVacancies(response.data.items);
+                setFound(response.data.total);
+                setPages(response.data.pages);
+                setLoading(true);
+                console.log(isLoading);
+            })
+            .catch(error => {
+                console.error('Error fetching vacancies:', error);
+                setVacancies([]);
+                setFound();
+                setPages();
+            });
+        
     }
 
     const [categories, setCategories] = useState([]);
@@ -68,8 +87,9 @@ export default function FilterHook() {
 
     useEffect(() => {
         axios.get('http://localhost:8000/filters/categories')
-            .then(response => setCategories(response.data.detail))
+            .then(response => setCategories(response.data))
             .catch(error => console.error('Error fetching categories:', error));
+        localStorage.removeItem('filters')
     }, []);
 
     const handleCategoryClick = (category) => {
@@ -77,7 +97,7 @@ export default function FilterHook() {
             .then(response => {
                 setProfessionsByCategory({
                     ...professionsByCategory,
-                    [category]: response.data.detail
+                    [category]: response.data
                 });
             })
             .catch(error => console.error('Error fetching professions:', error));
@@ -89,9 +109,8 @@ export default function FilterHook() {
         axios.get('http://localhost:8000/filters/experience')
             .then(response => {
                 setExperience(response.data);
-                // console.log(response.data)
             })
-            .catch(error => console.error('Error fetching categories:', error));
+            .catch(error => console.error('Error fetching experience:', error));
 
     }, []);
 
@@ -107,7 +126,7 @@ export default function FilterHook() {
     };
 
     return (
-        <Box>
+        <Box position='relative'>
             <form onSubmit={handleSubmit(onSubmit)}>
                 <FormControl isInvalid={errors.name}>
 
@@ -184,26 +203,64 @@ export default function FilterHook() {
                     </FormErrorMessage>
                 </FormControl>
                 <Center>
-                    <Button type='submit' justifySelf={'center'}>
+                    <Button type='submit' justifySelf={'center'} onClick={() => {
+                        setCurrentPage(1);
+                        setLoading(false)
+                        }}>
                         Применить фильтр
                     </Button>
                 </Center>
+
             </form>
             {
                 found ? <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Нашлось всего {found} вакансий</Heading> :
                     <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Ничего не найдено</Heading>
             }
-            {
-                vacancies.map(vacancy => (
-                    < VacancyInfo name={vacancy.name}
-                        experience={vacancy.experience}
-                        employer={vacancy.employer}
-                        salary_from={vacancy.salary_from}
-                        salary_to={vacancy.salary_to}
-                        salary_currency={vacancy.salary_currency} />
+            <Center>
+                <Skeleton isLoaded={isLoading}>
+                    <SimpleGrid columns={3} spacing={10}   >
+                        {
+                            vacancies.map(vacancy => (
+                                < VacancyInfo name={vacancy.name}
+                                    experience={vacancy.experience}
+                                    employer={vacancy.employer}
+                                    salary_from={vacancy.salary_from}
+                                    salary_to={vacancy.salary_to}
+                                    salary_currency={vacancy.salary_currency}
+                                    id={vacancy.id} />
 
-                ))
-            }
+                            ))
+                        }
+                    </SimpleGrid>
+                </Skeleton>
+            </Center>
+            {pages ? <Center marginTop={'2%'}>
+                <Button isDisabled={currentPage == 1} onClick={() => {
+                    setCurrentPage(currentPage - 1);
+                    const val = JSON.parse(localStorage.getItem('filters'));
+                    setTimeout(()=>do_axios(val,currentPage-1),200)
+                    window.scrollTo(0, 650)
+
+                }}>
+                    Предыдущая страница
+                </Button>
+                <Text>
+                    {currentPage}
+                </Text>
+                <Button isDisabled={currentPage == pages} onClick={() => {
+                    setCurrentPage(currentPage + 1);
+                    const val = JSON.parse(localStorage.getItem('filters'));
+                    setTimeout(()=>console.log('time'),200);
+                    do_axios(val,currentPage+1);
+                    window.scrollTo(0, 650);
+                    
+
+                }}>
+                    Следующая страница
+                </Button>
+            </Center>
+                : <div></div>}
+
         </Box>
     )
 }
