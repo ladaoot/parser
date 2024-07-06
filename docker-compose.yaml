@@ -1,0 +1,57 @@
+version: "3.10"
+services:
+
+  db:
+    container_name: db
+    restart: always # перезапуск в случае ошибок
+    image: postgres:15.2
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: db
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/ # сохранение данных с бд при перезапуске
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT} # порт внутри контейенера:снаружи
+    expose:
+      - ${POSTGRES_PORT}
+    command:
+      - "postgres"
+      - "-c"
+      - "port=${POSTGRES_PORT}"
+    networks:
+      - parser
+
+  back_service:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: back_service
+    env_file:
+      - .env
+    ports:
+      - ${SERVICE_PORT}:${SERVICE_PORT}
+    depends_on:
+      - db
+    networks:
+      - parser
+      
+  front_service:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: front_service
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
+    depends_on:
+      - back_service
+    networks:
+      - parser
+
+networks:
+  parser:
+    driver: bridge
