@@ -62,15 +62,17 @@ def get_filtered_vacancies(db: Session, filters: schemas.Filter):
         )
 
     if filters.professional_role:
-        for r in filters.professional_role:
-            query = query.filter(models.Vacancy.professional_roles.contains(filters.professional_role))
+        query = query.filter(models.Vacancy.professional_roles.contains(filters.professional_role))
 
     if filters.salary:
         query = query.filter(
-            (models.Vacancy.salary_from >= filters.salary) | (models.Vacancy.salary_to <= filters.salary))
+            ((models.Vacancy.salary_from.is_(None) )| (filters.salary >= models.Vacancy.salary_from)) &
+             ((models.Vacancy.salary_to.is_(None) )| (filters.salary <= models.Vacancy.salary_to))
+             )
 
     if filters.only_with_salary:
         query = query.filter((models.Vacancy.salary_from is not None) | (models.Vacancy.salary_to is not None))
+        print(filters.only_with_salary)
 
     if filters.currency:
         query = query.filter(models.Vacancy.salary_currency == filters.currency)

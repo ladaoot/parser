@@ -113,15 +113,15 @@ def map_from_hh_object_to_vacancies(items):
 
 
 @app.post("/vacancies")
-async def vacancies(page: int = 0, filters: Union[schemas.Filter, None] = schemas.Filter(),
+async def vacancies(flag: bool = False, filters: Union[schemas.Filter, None] = schemas.Filter(),
                     db: Session = Depends(get_db)) -> Page[schemas.VacancyModel]:
     # get_vacancies(filters)
     vacancies_data = orm.get_filtered_vacancies(db, filters)
-    if not vacancies_data or len(vacancies_data) < 30:
+    if not vacancies_data or len(vacancies_data) < 30 or flag:
         get_vacancies(filters)
         vacancies_data = orm.get_filtered_vacancies(db, filters)
 
-    return paginate(vacancies_data)
+    return paginate(vacancies_data,)
     # diction["vacancies"] = jsonable_encoder(orm.get_all_vacancies(db))
     # return JSONResponse(content=diction)
 
@@ -132,21 +132,27 @@ async def filters_categories(db: Session = Depends(get_db)):
 
     headers = {'OauthToken': constants.OAUTH_TOKEN}
 
-    response = requests.get(url, headers=headers)
-    cat = response.json()["categories"]
+    try:
+        response = requests.get(url, headers=headers)
+        cat = response.json()["categories"]
 
-    for c in cat:
-        orm.create_category(db, schemas.Category(id=c["id"], name=c["name"]))
+        for c in cat:
+            orm.create_category(db, schemas.Category(id=c["id"], name=c["name"]))
 
-        for r in c["roles"]:
-            orm.create_role(db, schemas.Role(id=r["id"], name=r["name"], category_id=c["id"]))
+            for r in c["roles"]:
+                orm.create_role(db, schemas.Role(id=r["id"], name=r["name"], category_id=c["id"]))
 
-    return JSONResponse(content=jsonable_encoder(orm.get_all_categories(db)))
+        return JSONResponse(content=jsonable_encoder(orm.get_all_categories(db)))
+    except Exception as e:
+        raise HTTPException(status_code=444, detail=jsonable_encoder(e.args))
 
 
 @app.get("/filters/categories/{cat_id}")
 async def get_roles_by_category(cat_id: str, db: Session = Depends(get_db)):
-    return JSONResponse(content=jsonable_encoder(orm.get_all_roles_by_category(db, int(cat_id))))
+    try:
+        return JSONResponse(content=jsonable_encoder(orm.get_all_roles_by_category(db, int(cat_id))))
+    except Exception as e:
+        raise HTTPException(status_code=444, detail=jsonable_encoder(e.args))
 
 
 @app.get("/filters/experience")
@@ -155,6 +161,9 @@ async def get_experience():
 
     headers = {'OauthToken': constants.OAUTH_TOKEN}
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
 
-    return JSONResponse(content=response.json()["experience"])
+        return JSONResponse(content=response.json()["experience"])
+    except Exception as e:
+        raise HTTPException(status_code=444, detail=jsonable_encoder(e.args))
