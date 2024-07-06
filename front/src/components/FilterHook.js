@@ -30,6 +30,7 @@ export default function FilterHook() {
     const {
         handleSubmit,
         register,
+        setError,
         formState: { errors, isSubmitting },
     } = useForm()
 
@@ -38,13 +39,17 @@ export default function FilterHook() {
     const [pages, setPages] = useState()
     const [currentPage, setCurrentPage] = useState(1)
     const [isLoading, setLoading] = useState(true)
+    // const [isSubmitting, setSubbmiting]=useState(false)
 
 
 
     function onSubmit(values) {
         return new Promise((resolve) => {
+            // console.log(isSubmitting);
             setTimeout(() => {
+                // console.log(values)
                 // alert(JSON.stringify(values, null, 2))
+                setLoading(false)
                 localStorage.setItem('filters', JSON.stringify(values))
                 setLoading(false)
                 do_axios(values,1)
@@ -54,32 +59,32 @@ export default function FilterHook() {
         })
     }
 
-    function do_axios(values,page) {
+    function do_axios(values, page, fromSubmit) {
         setLoading(false);
-        console.log(isLoading);
-        axios.post(`http://localhost:8000/vacancies?page=${page}&size=30`, {
+        // console.log(isSubmitting);
+        axios.post(`http://localhost:8000/vacancies?page=${page}&size=30&flag=${fromSubmit}`, {
             text: values.text,
             salary: values.salary,
             currency: values.currency,
             only_with_salary: values.only_with_salary,
             professional_role: values.professional_role,
             experience: values.experience,
-            page: page-1
+            page: page - 1
         })
             .then(response => {
                 setVacancies(response.data.items);
                 setFound(response.data.total);
                 setPages(response.data.pages);
                 setLoading(true);
-                console.log(isLoading);
+                // console.log(isLoading);
             })
             .catch(error => {
-                console.error('Error fetching vacancies:', error);
+                setError('fetch', { type: 'VacanciesError', message: `Error fetching vacancies: ${error}` });
                 setVacancies([]);
                 setFound();
                 setPages();
             });
-        
+
     }
 
     const [categories, setCategories] = useState([]);
@@ -88,7 +93,7 @@ export default function FilterHook() {
     useEffect(() => {
         axios.get('http://localhost:8000/filters/categories')
             .then(response => setCategories(response.data))
-            .catch(error => console.error('Error fetching categories:', error));
+            .catch(error => setError('fetch', { type: 'RoleError', message: `Error fetching categories: ${error}` }));
         localStorage.removeItem('filters')
     }, []);
 
@@ -100,7 +105,7 @@ export default function FilterHook() {
                     [category]: response.data
                 });
             })
-            .catch(error => console.error('Error fetching professions:', error));
+            .catch(error => setError('fetch', { type: 'RoleError', message: `Error fetching roles: ${error}` }));
     };
 
     const [experience, setExperience] = useState([]);
@@ -110,7 +115,7 @@ export default function FilterHook() {
             .then(response => {
                 setExperience(response.data);
             })
-            .catch(error => console.error('Error fetching experience:', error));
+            .catch(error => setError('fetch', { type: 'ExperienceError', message: `Error fetching experience: ${error}` }));
 
     }, []);
 
@@ -196,17 +201,19 @@ export default function FilterHook() {
                             <input type='radio' id='null' value={null} {...register('experience')} />
                             <label>Не имеет значения</label>
                         </Stack>
-
+                        <Heading textColor={'red'}>{errors.fetch ? errors.fetch.message : ""}</Heading>
                     </VStack>
+
                     <FormErrorMessage>
-                        {errors.text && errors.text.message}
+
                     </FormErrorMessage>
                 </FormControl>
                 <Center>
                     <Button type='submit' justifySelf={'center'} onClick={() => {
                         setCurrentPage(1);
-                        setLoading(false)
-                        }}>
+                        setLoading(false);
+                        // console.log(isSubmitting);
+                    }}>
                         Применить фильтр
                     </Button>
                 </Center>
@@ -214,13 +221,16 @@ export default function FilterHook() {
             </form>
             {
                 found ? <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Нашлось всего {found} вакансий</Heading> :
-                    <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Ничего не найдено</Heading>
+                    localStorage.getItem('filter') ?
+                        <Heading marginLeft={'17.5%'} marginTop={'2%'} textColor={'#EE7230'}>Ничего не найдено:</Heading> :
+                        <div></div>
             }
             <Center>
-                <Skeleton isLoaded={isLoading}>
-                    <SimpleGrid columns={3} spacing={10}   >
-                        {
-                            vacancies.map(vacancy => (
+
+                <SimpleGrid columns={3} spacing={10}   >
+                    {
+                        vacancies.map(vacancy => (
+                            <Skeleton isLoaded={isLoading}>
                                 < VacancyInfo name={vacancy.name}
                                     experience={vacancy.experience}
                                     employer={vacancy.employer}
@@ -228,39 +238,43 @@ export default function FilterHook() {
                                     salary_to={vacancy.salary_to}
                                     salary_currency={vacancy.salary_currency}
                                     id={vacancy.id} />
+                            </Skeleton>
 
-                            ))
-                        }
-                    </SimpleGrid>
-                </Skeleton>
+                        ))
+                    }
+                </SimpleGrid>
+
             </Center>
-            {pages ? <Center marginTop={'2%'}>
-                <Button isDisabled={currentPage == 1} onClick={() => {
-                    setCurrentPage(currentPage - 1);
-                    const val = JSON.parse(localStorage.getItem('filters'));
-                    setTimeout(()=>do_axios(val,currentPage-1),200)
-                    window.scrollTo(0, 650)
+            {
+                pages ? <Center marginTop={'2%'}>
+                    <Button isDisabled={currentPage == 1} onClick={() => {
+                        setCurrentPage(currentPage - 1);
+                        const val = JSON.parse(localStorage.getItem('filters'));
+                        // setTimeout(()=>
+                        do_axios(val, currentPage - 1, false)
+                        window.scrollTo(0, 650)
 
-                }}>
-                    Предыдущая страница
-                </Button>
-                <Text>
-                    {currentPage}
-                </Text>
-                <Button isDisabled={currentPage == pages} onClick={() => {
-                    setCurrentPage(currentPage + 1);
-                    const val = JSON.parse(localStorage.getItem('filters'));
-                    setTimeout(()=>console.log('time'),200);
-                    do_axios(val,currentPage+1);
-                    window.scrollTo(0, 650);
-                    
+                    }}>
+                        Предыдущая страница
+                    </Button>
+                    <Text>
+                        {currentPage}
+                    </Text>
+                    <Button isDisabled={currentPage == pages} onClick={() => {
+                        setCurrentPage(currentPage + 1);
+                        const val = JSON.parse(localStorage.getItem('filters'));
+                        // setTimeout(()=>console.log('time'),200);
+                        do_axios(val, currentPage + 1, false);
+                        window.scrollTo(0, 650);
 
-                }}>
-                    Следующая страница
-                </Button>
-            </Center>
-                : <div></div>}
 
-        </Box>
+                    }}>
+                        Следующая страница
+                    </Button>
+                </Center>
+                    : <div></div>
+            }
+
+        </Box >
     )
 }
