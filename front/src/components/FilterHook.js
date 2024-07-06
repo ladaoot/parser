@@ -52,7 +52,7 @@ export default function FilterHook() {
                 setLoading(false)
                 localStorage.setItem('filters', JSON.stringify(values))
                 setLoading(false)
-                do_axios(values,1)
+                do_axios(values,1,true)
                 
                 resolve()
             }, 200)
